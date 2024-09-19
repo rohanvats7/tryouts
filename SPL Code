@@ -1,0 +1,70 @@
+eval dst1=replace(host,"\.((.*))","")
+
+eval dst1=replace(host,"(^([\w\d-]+).?)","")
+
+if(like(field, "foo%"), "yes a foo", "not a foo")
+
+if(like(host, "%gov.on.ca%"),(mvindex(split(host, ".service.gocloud.gov.on.ca"), 0)),null())
+
+if(like(host, "%gov.on.ca%"),(mvindex(split(host, ".mgmt.cihs.gov.on.ca"), 0)),null())
+
+eval dest_nt_domain = case(like(host, "%.service.gocloud.gov.on.ca%"), (mvindex(split(host, "service.gocloud.gov.on.ca"),1)),like(host, "%.mgmt.cihs.gov.on.ca%"), (mvindex(split(host, "mgmt.cihs.gov.on.ca"),1)),true(),dest_nt_domain)
+
+^([^\w][\d]+[^\w][\d]+[\s])([\w\d-]+[\d:]+[^\w][\d\w]+[\s][\w]+)([\s\-]+)
+
+if(like(host, "%gov.on.ca%"),(replace(host,"(^([\w\d-]+).?)",""), dest)
+
+if(like(url, "%\*\.%"),replace('url_domain',"(^(\*\.))",""), 'url_domain')
+
+if(isnull(dest),(if(like(dest1, "%gov.on.ca%"),(replace(dest1,"(^([\w\d-]+).?)",""),dest1),(replace(dest,"(^([\w\d-]+).?)","")))),(if(like(dest, "%gov.on.ca%"),(replace(dest,"(^([\w\d-]+).?)",""),dest))))
+
+case(like(description, "%()%"),replace(description,"^([-\w\d()]+)?",""),true(),process)
+
+case(isnotnull(parent_process_name) AND parent_process_name!=(\"\"),parent_process_name, isnotnull(parent_process) AND parent_process!=(\"\"),replace(parent_process, (\"^\\s*([^\\s]+).*\",\"\\1\"),1=1,"unknown"))
+
+case(like(src1, "%gov.on.ca%"),replace(src1,"\.((.*))",""), like(src2, "%gov.on.ca%"),replace(src2,"\.((.*))",""),true(),src)
+
+===o365:management:activity=======
+
+if(Operation="UserLoginFailed", "failure",case(Operation IN ("ForeignRealmIndexLogonInitialAuthUsingADFSFederatedToken","PasswordLogonCookieCopyUsingDAToken","PasswordLogonInitialAuthUsingADFSFederatedToken","PasswordLogonInitialAuthUsingPassword","UserLoggedIn"),case(isnull(LogonError), "success", true(), "failure"),
+'Operation'=="FileSyncDownloadedFull","downloaded",'Operation'=="FileSyncUploadedFull","uploaded",isnotnull('Verdict') AND Verdict IN ("Malware","Phish") AND 'LatestDeliveryLocation'=="Quarantine","quarantined",isnotnull('Verdict') AND Verdict IN ("Malware","Phish") AND 'LatestDeliveryLocation'=="JunkFolder","delivered",isnotnull('Verdict') AND Verdict IN ("Malware","Phish") AND 'LatestDeliveryLocation'=="Failed","blocked",isnotnull('Verdict') AND Verdict IN ("Malware","Phish") AND 'LatestDeliveryLocation'=="External","delivered",isnotnull('Verdict') AND Verdict IN ("Malware","Phish") AND 'LatestDeliveryLocation'=="Inbox","delivered",isnotnull('Verdict') AND Verdict IN ("Malware","Phish") AND 'LatestDeliveryLocation'=="Dropped","blocked",isnotnull('Verdict') AND Verdict IN ("Malware","Phish") AND 'LatestDeliveryLocation'=="Forwarded","quarantined",'LatestDeliveryLocation'=="DeletedFolder","deleted",true(),action))
+
+if('Verdict'=="Phish",case('LatestDeliveryLocation'=="Quarantine","quarantined",'LatestDeliveryLocation'=="JunkFolder","delivered",'LatestDeliveryLocation'=="Failed","blocked",'LatestDeliveryLocation'=="External","delivered",'LatestDeliveryLocation'=="Inbox","delivered",'LatestDeliveryLocation'=="Dropped","blocked",'LatestDeliveryLocation'=="Forwarded","quarantined",'LatestDeliveryLocation'=="DeletedFolder","deleted",true(),action2),action)
+
+case(isnotnull('PolicyDetails{}.PolicyName') and Operation IN ("DLPRuleMatch") and Workload IN ("SharePoint", "OneDrive"), 'PolicyDetails{}.PolicyName', isnotnull('PolicyDetails{}.Rules{}.RuleName') and Operation IN ("DLPRuleUndo") and Workload IN ("OneDrive"), 'PolicyDetails{}.Rules{}.RuleName',isnotnull('Verdict') AND Verdict IN ("Malware","Phish"),coalesce('ThreatsAndDetectionTech{}',signature) ,true(), Operation)
+
+case(isnotnull(ActorIpAddress) and ActorIpAddress!="",ActorIpAddress, isnotnull(ClientIP) and ClientIP!="",ClientIP,isnotnull(SenderIp),SenderIp)
+
+case(Operation IN ("DlpRuleMatch") and Workload="Exchange", 'ExchangeMetaData.To{}',isnotnull('Recipients{}'),'Recipients{}')
+
+case(Operation IN ("DlpRuleMatch") and Workload="Exchange", 'ExchangeMetaData.UniqueID',isnotnull(Id),'Id')	
+
+case(Operation IN ("DlpRuleMatch") and Workload="Exchange", 'ExchangeMetaData.Subject',isnotnull(Subject),'Subject')	
+
+case(Operation IN ("DlpRuleMatch") and Workload="Exchange", 'PolicyDetails{}.Rules{}.ConditionsMatched.SensitiveInformation{}.Location',isnotnull('AttachmentData{}.FileName'),'AttachmentData{}.FileName',true(),SourceFileName)
+
+case(like(Operation, "% user%") AND UserId != "EMPTY.", UserId,isnotnull('P1Sender'),'P1Sender', Operation="AddedToGroup" and TargetUserOrGroupType="Member", UserId, Operation IN ("Add owner to application.","Add member to group.","Add member to role."), actorUPN,Operation IN ("Add service principal."), UserId, Operation IN ("RemovedFromSiteCollection","RemovedFromSecureLink","DLPRuleMatch","DlpRuleMatch","Remove-MailContact", "New-MailContact", "Set-Mailbox", "New-Mailbox", "Set-User", "Add-RecipientPermission", "Remove-RoleGroupMember", "Set-AdminAuditLogConfig") and Workload IN ("SharePoint","Exchange"), UserId, Operation IN ("Add owner to group.","Disable account.","Remove member from group.","Change user password.","Update StsRefreshTokenValidFrom Timestamp.","Reset user password.","Remove owner from group.","Restore user.","Add eligible member to role.","Remove eligible member from role.","Remove member from role.","Remove owner from application.","Set user manager.", "Add service principal.", "Remove service principal.") and Workload IN ("AzureActiveDirectory"),mvindex('Actor{}.ID',coalesce(mvfind('Actor{}.Type',"^5$"), mvfind('Actor{}.Type',"^1$"))), Workload="OneDrive" and Operation IN ("DLPRuleMatch","DLPRuleUndo"),'SharePointMetaData.From', true(), 'user')
+
+case(like(url, "%\*\.%"),mvindex(split(replace(url,"(^(\*\.))",""),":"),0),true(),url_domain)
+
+case(like(url, "%\*\.%"),replace('url',"(^(\*\.))",""),true(),url_domain)
+
+case(match(url, "^(?:https?://)?(\*?[^/:]+)"), replace(replace(url, "^(?:https?://)?(\*?[^/:]+).*", "\1"), "^\*", ""))  
+
+case(Operation IN ("DlpRuleMatch") and Workload="Exchange", SrcUserDomain, Operation IN ("TIMailData"),replace('P1Sender',"(^(.*?)+@)",""),true(),src_user_domain)
+
+case(like(description, "%(%"),mvindex(split(replace(description,"([-\w]+?\s?[\s\w]+?)$",""),"("),0),isnotnull('process_name1'),'process_name1',true(),process_name)
+
+eval host_dvc=case(isnotnull('properties.Entity Name'),'properties.Entity Name',isnull('properties.Entity Name'),replace(resourceId,"^(.*)\/[^\/]+$",""),true(),host_dvc)
+
+-----------host validation-----------
+
+index=windows OR index=linux host IN ("*abc*", "*def*")
+| eval tag_count = mvcount(tag)
+| eval tags = mvjoin(tag, ", ")
+| sort -_time
+| dedup host 
+| convert ctime(_time) AS LastObserved
+| table host source sourcetype _time LastObserved _raw tags tag_count
+
+-----------------------------------------------------------------------
